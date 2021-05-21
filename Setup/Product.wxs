@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Based on tutorial from Matthew Gajdosik
+located at https://www.tallan.com/blog/2017/02/02/creating-an-effortless-custom-ssis-object-installer-using-wix/
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<!-- SQL Server 2012 -->
+	<?define sqlVersion=110?>
+	<Product 
+		Id="*"
+		Name="Informatica Linear Taskflow Trigger SSIS Task" 
+		Language="1033"
+		Version="1.0.0.0" 
+		Manufacturer="Martin Ignacio Alonso"
+		UpgradeCode="fb27b3b0-d989-4d37-a096-18aa6ebc7245"
+	>
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+		<WixVariable Id="WixUILicenseRtf" Value="$(var.ProjectDir)gnu30license.rtf" />
+		
+		<!--Form to select install dir-->
+		<UIRef Id="WixUI_InstallDir" />
+		
+		<Property Id="WIXUI_INSTALLDIR" Value="SQLSERVERDIR" />
+		
+		<MajorUpgrade DowngradeErrorMessage="A newer version of Informatica Linear Taskflow Trigger SSIS Task is already installed." />
+		<MediaTemplate />
+
+		<Feature Id="ProductFeature" Title="ILTTSSISTask" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+		</Feature>
+
+		<!-- Define a new property and default it to a reasonable location. -->
+		<Property Id="SQLDIR" Value="C:\Program Files (x86)\Microsoft SQL Server\$(var.sqlVersion)">
+			<!-- Then search the registry for either the 32- or 64-bit SQL Server installation directories. -->
+			<RegistrySearch Id="SQLDIR_REG_32"
+							Key="SOFTWARE\Microsoft\Microsoft SQL Server\$(var.sqlVersion)"
+							Name="VerSpecificRootDir"
+							Root="HKLM" Type="raw" Win64="no" />
+			<RegistrySearch Id="SQLDIR_REG_64"
+							Key="SOFTWARE\Microsoft\Microsoft SQL Server\$(var.sqlVersion)"
+							Name="VerSpecificRootDir"
+							Root="HKLM" Type="raw" Win64="yes" />
+		</Property>
+		
+		<!-- Finally, override the directory value used by the InstallDir UI item. -->
+		<SetDirectory Id="SQLSERVERDIR" Sequence="first" Value="[SQLDIR]" />
+	</Product>
+
+	
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="GAC" Name="GAC" />
+			<Directory Id="SQLSERVERDIR">
+				<Directory Id="DTSFolder" Name="DTS">
+					<Directory Id="TASKFOLDER" Name="Tasks" />
+				</Directory>
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ProductComponents" >
+			<Component Id="Tasks_GAC" Directory="GAC" Guid="E7CF9EA5-A4C0-4046-B3AE-39C6BE757D31">
+				<File
+					Id="Tasks_dll_GAC" 
+					Name="$(var.ILTTSSISTask.TargetFileName)"
+					Source="$(var.ILTTSSISTask.TargetPath)"
+					Assembly=".net"
+					KeyPath="yes"
+					Checksum="yes" 
+				/>
+				<RemoveFile 
+					Id="Tasks_dll_GAC" 
+					On="uninstall"
+					Name="$(var.ILTTSSISTask.TargetFileName)"
+				/>
+			</Component>
+
+			<Component Id="Tasks_SQL" Directory="TASKFOLDER" Guid="E8946624-6C13-4899-9A24-EC26134262E6">
+				<File 
+					Id="Tasks_dll_SQL"
+					Name="$(var.ILTTSSISTask.TargetFileName)"
+					Source="$(var.ILTTSSISTask.TargetPath)"
+					KeyPath="yes"
+					Checksum="yes"
+				/>
+				<RemoveFile 
+					Id="Tasks_dll_SQL"
+					On="uninstall"
+					Name="$(var.ILTTSSISTask.TargetFileName)"
+				/>
+			</Component>
+		</ComponentGroup>
+	</Fragment>
+</Wix>
